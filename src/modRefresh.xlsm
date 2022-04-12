@@ -1,0 +1,325 @@
+
+Function ClearData()
+    Range("시총").Value = ""
+    Range("_12MPER").Value = ""
+    Range("추정기관수").Value = ""
+    Range("목표주가").Value = ""
+    Range("자기주식").Value = ""
+    Range("배당률_크롤링").Value = ""
+    
+    sMain.Range("H3:AZ5").Value = ""
+    
+    Range("전일종가").Value = ""
+
+    Range("R_MONTHLY_BASE").CurrentRegion.Offset(4).Clear
+
+End Function
+
+'FN가이드 크롤링
+Function RefreshFnGuide()
+
+    On Error Resume Next
+    
+    stockCode = [V_STOCK_CODE]
+    stockName = [V_STOCK_NAME]
+    
+    '-----------------------------------------------------------------
+    'fn가이드에서 정보 크롤링
+    '-----------------------------------------------------------------
+    url = "http://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?gicode=" & stockCode
+    Debug.Print url
+    HTML = fn.GetHTML(url)
+    Set oHTML = CreateObject("htmlfile")
+    oHTML.body.innerHTML = HTML
+    '-----------------------------------------------------------------
+    
+    '-----------------------------------------------------------------
+    ' EPS / BPS / DPS 구하기
+    '-----------------------------------------------------------------
+    'fn가이드 값 시작년도
+    tmpEPS = Range("V_EPS_2020").Value
+    Set tbl = oHTML.getElementByID("highlight_D_Y").getelementsbytagname("table")(0)
+    
+    firstyear = Left(tbl.getelementsbytagname("div")(2).innerText, 4)
+    LastYear = sEPS.Range("F1").Value
+    
+    '''/// 메인 마지막 년도와 크롤링 마지막년도가 일치하지 않으면 최근년도 추가
+    If LastYear > Val(sEPS.Cells(2, sEPS.Range("IV2").End(xlToLeft).Column)) Then
+        Call sEPS.Year_Make(LastYear)
+    End If
+    '''///////////////////////////////////////////////////////////
+    
+    If Not IsNumeric(firstyear) Then
+        'MsgBox "fn가이드 시작년도를 찾을 수 없습니다", vbCritical
+        'Exit Function
+    Else
+    
+        col = WorksheetFunction.Match(firstyear, sEPS.Range("2:2"), 0)
+        
+        ReDim data(1 To 1, 1 To 8) As Variant
+        For Each tr In tbl.getelementsbytagname("tbody")(0).getelementsbytagname("tr")
+            
+            innerText = ""
+            innerText = tr.getelementsbytagname("th")(0).innerText
+            strType = Left(innerText, 3)
+            
+            Select Case strType
+                
+                Case "EPS", "BPS", "DPS"
+                
+                    Key = stockName & strType
+                    Row = 0
+                    Row = WorksheetFunction.Match(Key, sEPS.Columns(2), 0)
+                    If Row = 0 Then
+                        Row = sEPS.Cells(Rows.Count, "C").End(xlUp).Row + 1
+                        sEPS.Cells(Row, "B").FormulaR1C1 = "=RC[1]&RC[2]"
+                        sEPS.Cells(Row, "C").Resize(1, 2).Value = Array(stockName, strType)
+                    End If
+                    
+                    i = 1
+                    eYN = "N"
+                    
+                    Dim strLastValue    As String
+                    strLastValue = ""
+                    
+                    For Each td In tr.getelementsbytagname("td")
+
+                        If Trim(td.innerText) <> "" Then strLastValue = Trim(td.innerText)
+
+                        If Trim(td.innerText) = "" And sEPS.Cells(Row, col + i - 1).Value = "" Then
+                            sEPS.Cells(Row, col + i - 1).Value = strLastValue
+                        ElseIf Trim(td.innerText) = "" And sEPS.Cells(Row, col + i - 1).Value <> "" Then
+                        
+                        ElseIf Trim(td.innerText) <> "" Then
+                            sEPS.Cells(Row, col + i - 1).Value = Trim(td.innerText)
+                        End If
+                        
+                        If i = 8 Then ''' 예외적으로 1년 더 나올경우
+                            If sEPS.Cells(2, col + i).Value > 0 Then
+                                sEPS.Cells(Row, col + i).Value = strLastValue
+                            End If
+                        End If
+                        
+                        If sEPS.Cells(2, col + i).Value = "" Then
+                            Exit For
+                        End If
+                        
+                        i = i + 1
+                        
+                    Next
+                    
+            End Select
+            
+        Next
+        
+        '메인화면에 eps/bps/dps 출력하기
+        'DPS
+        
+        Dim lngColCount As Long
+        
+        lngColCount = sEPS.Range("B2").CurrentRegion.Columns.Count - 3
+        
+        r = 0: r = WorksheetFunction.Match(stockName & "EPS", sEPS.Columns("B"), 0)
+        If r > 0 Then
+            sMain.Range("H3").Resize(1, lngColCount).Value = sEPS.Cells(r, "E").Resize(1, lngColCount).Value
+        Else
+            sMain.Range("H3").Resize(1, lngColCount).Value = sEPS.Cells(r, "E").Resize(1, lngColCount).Value
+        End If
+        
+        'BPS
+        r = 0: r = WorksheetFunction.Match(stockName & "BPS", sEPS.Columns("B"), 0)
+        If r > 0 Then
+            sMain.Range("H4").Resize(1, lngColCount).Value = sEPS.Cells(r, "E").Resize(1, lngColCount).Value
+        Else
+            sMain.Range("H4").Resize(1, lngColCount).Value = sEPS.Cells(r, "E").Resize(1, lngColCount).Value
+        End If
+        
+        'DPS
+        r = 0: r = WorksheetFunction.Match(stockName & "DPS", sEPS.Columns("B"), 0)
+        If r > 0 Then
+            sMain.Range("H5").Resize(1, lngColCount).Value = sEPS.Cells(r, "E").Resize(1, lngColCount).Value
+        Else
+            sMain.Range("H5").Resize(1, lngColCount).Value = sEPS.Cells(r, "E").Resize(1, lngColCount).Value
+        End If
+    
+    End If
+    
+    '-----------------------------------------------------------------
+    ' G7:J10
+    '-----------------------------------------------------------------
+    'Range("전일종가").Value = oHTML.getElementByID("svdMainChartTxt11").innertext
+    Range("배당률_크롤링").Value = oHTML.getElementByID("corp_group2").getelementsbytagname("dd")(9).innerText
+    
+    '-----------------------------------------------------------------
+    ' B5:E10
+    '-----------------------------------------------------------------
+    Range("시총").Value = oHTML.getElementByID("svdMainGrid1").getelementsbytagname("tr")(3).getelementsbytagname("td")(0).innerText
+    Range("거래대금").Value = oHTML.getElementByID("svdMainGrid1").getelementsbytagname("tr")(1).getelementsbytagname("td")(1).innerText
+    Range("외국인지분율").Value = oHTML.getElementByID("svdMainGrid1").getelementsbytagname("tr")(2).getelementsbytagname("td")(1).innerText
+    
+    Range("_12MPER").Value = oHTML.getElementByID("corp_group2").getelementsbytagname("dd")(3).innerText
+    Range("목표주가").Value = oHTML.getElementByID("svdMainGrid9").getelementsbytagname("td")(1).innerText
+    Range("추정기관수").Value = oHTML.getElementByID("svdMainGrid9").getelementsbytagname("td")(4).innerText
+    Range("자기주식").Value = oHTML.getElementByID("svdMainGrid5").getelementsbytagname("tr")(5).getelementsbytagname("td")(2).innerText
+
+End Function
+
+
+'거래소 크롤링
+Function RefreshMarketData()
+    
+    cht_min = [V_CHT_MIN]
+    cht_max = [V_CHT_MAX]
+    
+    '-----------------------------------------------------------------
+    '네이버금융에서 월별 종가 크롤링
+    '-----------------------------------------------------------------
+    code = Mid(Range("V_STOCK_CODE").Value, 2)
+    url = "https://fchart.stock.naver.com/sise.nhn?symbol=" & code & "&timeframe=month&count=200&requestType=0"
+    HTML = fn.GetHTML(url:=url, debugMode:=False)
+    HTML = Mid(HTML, InStr(HTML, "<item"))
+    '-----------------------------------------------------------------
+    aryitem = Split(HTML, "/>")
+    
+    For k = 0 To UBound(aryitem) - 1
+        aryValue = Split(aryitem(k), "|")
+        
+        yyyymm = Mid(aryValue(0), InStr(aryValue(0), """") + 1, 6)
+        yyyy = CInt(Left(yyyymm, 4)) '년
+        If yyyy >= Range("V_START_YEAR").Value Then
+            mCnt = UBound(aryitem) - 1 - k + 1
+            ReDim data(1 To mCnt, 1 To 13)
+            Exit For
+        End If
+    Next
+
+    aryWeight = Range("R_WEIGHT").Value '가중치
+    
+    aryEPS = Range("R_EPS").Value
+    aryBPS = Range("R_BPS").Value
+    
+    For j = UBound(aryitem) - 1 To k Step -1
+        
+        aryValue = Split(aryitem(j), "|")
+        yyyymm = Mid(aryValue(0), InStr(aryValue(0), """") + 1, 6)
+        yyyy = CInt(Left(yyyymm, 4)) '년
+        If yyyy >= 2010 Then
+            i = i + 1
+            
+            mm = CInt(Right(yyyymm, 2))   '월
+            
+            wt0 = aryWeight(mm, 1) '전년 가중치
+            wt1 = aryWeight(mm, 2) '당해 가중치
+            wt2 = aryWeight(mm, 3) '내년 가중치
+            wt3 = aryWeight(mm, 4) '내후년 가중치
+            
+            'EPS
+            yEPS0 = Replace(aryEPS(1, -2009 + yyyy - 1), " - ", 0) ''' 전년 EPS
+            yEPS1 = Replace(aryEPS(1, -2009 + yyyy), " - ", 0) ''''''' 당년 EPS
+            yEPS2 = Replace(aryEPS(1, -2009 + yyyy + 1), " - ", 0) ''' 내년 EPS
+            yEPS3 = Replace(aryEPS(1, -2009 + yyyy + 2), " - ", 0) ''' 내후년 EPS
+            
+            mEPS = Round((yEPS0 * wt0 / (wt0 + wt1 + wt2 + wt3)), 0) + Round((yEPS1 * wt1 / (wt0 + wt1 + wt2 + wt3)), 0) _
+                   + Round((yEPS2 * wt2 / (wt0 + wt1 + wt2 + wt3)), 0) + Round((yEPS3 * wt3 / (wt0 + wt1 + wt2 + wt3)), 0)
+            
+            'BPS
+            yBPS0 = Replace(aryBPS(1, -2009 + yyyy - 1), " - ", 0)
+            yBPS1 = Replace(aryBPS(1, -2009 + yyyy), " - ", 0)
+            yBPS2 = Replace(aryBPS(1, -2009 + yyyy + 1), " - ", 0)
+            yBPS3 = Replace(aryBPS(1, -2009 + yyyy + 2), " - ", 0)
+            
+            mBPS = Round((yBPS0 * wt0 / (wt0 + wt1 + wt2 + wt3)), 0) + Round((yBPS1 * wt1 / (wt0 + wt1 + wt2 + wt3)), 0) _
+                   + Round((yBPS2 * wt2 / (wt0 + wt1 + wt2 + wt3)), 0) + Round((yBPS3 * wt3 / (wt0 + wt1 + wt2 + wt3)), 0)
+            
+            
+            data(i, 1) = yyyymm
+            data(i, 2) = mEPS
+            data(i, 3) = mBPS
+            
+            '시/고/저/종
+            si = CLng(aryValue(1))
+            hi = CLng(aryValue(2))
+            rw = CLng(aryValue(3))
+            jo = CLng(aryValue(4))
+            
+            '저가
+            If data(i, 4) = 0 Or (si > 0 And si < data(i, 4)) Then data(i, 4) = si
+            If data(i, 4) = 0 Or (rw > 0 And rw < data(i, 4)) Then data(i, 4) = rw
+            If data(i, 4) = 0 Or (hi > 0 And hi < data(i, 4)) Then data(i, 4) = hi
+            If data(i, 4) = 0 Or (jo > 0 And jo < data(i, 4)) Then data(i, 4) = jo
+
+            '고가
+            If data(i, 5) = 0 Or (si > 0 And si > data(i, 5)) Then data(i, 5) = si
+            If data(i, 5) = 0 Or (rw > 0 And rw > data(i, 5)) Then data(i, 5) = rw
+            If data(i, 5) = 0 Or (hi > 0 And hi > data(i, 5)) Then data(i, 5) = hi
+            If data(i, 5) = 0 Or (jo > 0 And jo > data(i, 5)) Then data(i, 5) = jo
+
+
+            If mEPS < cht_min Then data(i, 6) = cht_min Else If mEPS > 0 Then data(i, 6) = data(i, 4) / mEPS
+            If data(i, 6) > cht_max Then data(i, 6) = cht_max
+            If mEPS < cht_min Then data(i, 7) = cht_min Else If mEPS > 0 Then data(i, 7) = data(i, 5) / mEPS
+            If data(i, 7) > cht_max Then data(i, 7) = cht_max
+            
+            data(i, 8) = "=PER_AVG_저"
+            data(i, 9) = "=PER_AVG_고"
+            data(i, 12) = "=PBR_AVG_저"
+            data(i, 13) = "=PBR_AVG_고"
+            
+            If mBPS > 0 Then data(i, 10) = data(i, 4) / mBPS
+            If mBPS > 0 Then data(i, 11) = data(i, 5) / mBPS
+
+            If i = 1 Then Range("전일종가").Value = jo
+        End If
+    Next
+
+    Range("R_MONTHLY_BASE").CurrentRegion.Offset(4).Clear
+    Set rngData = Range("R_MONTHLY_BASE").Offset(1).Resize(UBound(data, 1), UBound(data, 2))
+    
+    rngData.Rows(1).AutoFill rngData
+    rngData.Value = data
+    
+End Function
+
+
+Function RefreshEPSChange()
+
+    Sheets("메인화면").Range("P42:S54").ClearContents
+    
+    '-----------------------------------------------------------------
+    '와이즈리포트에서 EPS/수정주가/목표주가 크롤링
+    '-----------------------------------------------------------------
+    code = Mid(Range("V_STOCK_CODE").Value, 2)
+    url = "https://navercomp.wisereport.co.kr/company/ajax/cF5001.aspx?cmp_cd=" & code & _
+        "&dt=" & Format(Now, "yyyymmdd") & "&yymm=" & Format(Now, "yyyy") & "12&frq=Y&acc_cd=121000&fingubun=MAIN&chartType=svg"
+    HTML = fn.GetHTML(url:=url, debugMode:=0)
+    HTML = Replace(HTML, "\", "")
+    dt = Replace(Replace(fn.GetBetween(HTML, "categories"":[", "]"), """", ""), "/", "-")
+    close_price = fn.GetBetween(HTML, "close_price"":[", "]")
+    target_price = fn.GetBetween(HTML, "target_price"":[", "]")
+    eps = fn.GetBetween(HTML, "select_item"":[", "]")
+    
+    i = 0
+    For Each a In Split(dt, ",")
+       Worksheets("메인화면").Range("P42").Offset(i).Value = a
+       i = i + 1
+    Next
+
+    i = 0
+    For Each a In Split(eps, ",")
+       Worksheets("메인화면").Range("Q42").Offset(i).Value = a
+       i = i + 1
+    Next
+
+    i = 0
+    For Each a In Split(close_price, ",")
+       Worksheets("메인화면").Range("R42").Offset(i).Value = a
+       i = i + 1
+    Next
+
+    i = 0
+    For Each a In Split(target_price, ",")
+       Worksheets("메인화면").Range("S42").Offset(i).Value = a
+       i = i + 1
+    Next
+
+End Function

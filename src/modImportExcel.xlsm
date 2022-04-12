@@ -1,0 +1,69 @@
+Sub import()
+
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    fd.AllowMultiSelect = False
+    result = fd.Show
+    If result <> -1 Then Exit Sub
+    file_path = fd.SelectedItems(1)
+    'Application.ScreenUpdating = False
+    Set wbData = Workbooks.Open(file_path)
+    Set wsdata = wbData.Worksheets("Value")
+    Application.Goto wsdata.Cells(1)
+    Set wsprint = ThisWorkbook.Worksheets("EPS")
+    
+    first_year = wsdata.Range("C32").Value
+    k = 0
+    
+    lngsyear = wsdata.Range("C32")
+    lngC = WorksheetFunction.Match(lngsyear, sEPS.Range("2:2"), 0)
+    
+    For Each 종목명 In wbData.Worksheets("종합").Range("E6:E2093").Value
+        
+        '종목 입력
+        wsdata.Range("B2").Value = 종목명
+        
+        'EPS
+        data = wsdata.Range("C33:K33").Value
+        Set rfind = sEPS.Range("B:B").Find(종목명 & "EPS", , xlValues, xlWhole)
+        If rfind Is Nothing Then
+            r = sEPS.Cells(Rows.Count, "B").End(xlUp).Row + 1
+            sEPS.Cells(r, 2).FormulaR1C1 = "=RC[1]&RC[2]"
+            sEPS.Cells(r, 3).Value = "종목명"
+            sEPS.Cells(r, 4).Value = "EPS"
+        Else
+            r = rfind.Row
+        End If
+        sEPS.Cells(r, lngC).Resize(1, 9).Value = data
+        
+        'BPS
+        data = wsdata.Range("C34:K34").Value
+        Set rfind = sEPS.Range("B:B").Find(종목명 & "BPS", , xlValues, xlWhole)
+        If rfind Is Nothing Then
+            r = sEPS.Cells(Rows.Count, "B").End(xlUp).Row + 1
+            sEPS.Cells(r, 2).FormulaR1C1 = "=RC[1]&RC[2]"
+            sEPS.Cells(r, 3).Value = "종목명"
+            sEPS.Cells(r, 4).Value = "BPS"
+        Else
+            r = rfind.Row
+        End If
+        sEPS.Cells(r, lngC).Resize(1, 9).Value = data
+        
+        
+        'DPS
+        data = wsdata.Range("C45:K45").Value
+        Set rfind = sEPS.Range("B:B").Find(종목명 & "DPS", , xlValues, xlWhole)
+        If rfind Is Nothing Then
+            r = sEPS.Cells(Rows.Count, "B").End(xlUp).Row + 1
+            sEPS.Cells(r, 2).FormulaR1C1 = "=RC[1]&RC[2]"
+            sEPS.Cells(r, 3).Value = "종목명"
+            sEPS.Cells(r, 4).Value = "DPS"
+        Else
+            r = rfind.Row
+        End If
+        sEPS.Cells(r, lngC).Resize(1, 9).Value = data
+        DoEvents
+    Next
+    
+End Sub
+
+

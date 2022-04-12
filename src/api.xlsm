@@ -1,0 +1,480 @@
+'컨센서스
+'3개년 EPS 데이터 받아오기
+Sub fnspace_API_Consen_3years_EPS()
+
+Dim htmlResult As Object
+Dim strResult As String
+Dim url As String
+Dim v As Variant
+
+On Error GoTo errHandle:
+
+code = [V_STOCK_CODE]
+standYear = Sheets("개별종목").Range("C41").Value
+'OX
+logicOX = Sheets("개별종목").Range("E41").Value
+
+'파일 이름
+FileName = Application.ActiveWorkbook.Path & "\data" & "\" & code & ".xlsx"
+
+'덮어씌울 파일 확인
+Set wbLocal = ThisWorkbook
+Set wbCopy = Workbooks.Open(FileName)
+Set sht = wbCopy.ActiveSheet
+
+'전체행
+rownum = sht.Cells(Rows.Count, 20 + standYear - 2020).End(xlUp).Row
+
+'처음인 경우만 API 호출 / 호출 원하는 경우 / 오늘 이미 수집한 경우는 제외
+If rownum = 10 Or (logicOX = "o" And sht.Range("W11").Value <> Date) Then
+    url = "https://www.fnspace.com/Api/Consensus2Api?key=##=json&code=" & code & "&item=E312000&consolgb=M&annualgb=A&fraccyear=" & standYear + 1 & "&toaccyear=" & standYear + 3
+    Set htmlResult = CreateObject("htmlfile")
+    Set htmlResult = GetHttp(url, "GET")
+    
+    strResult = htmlResult.body.innerHTML
+    
+    '필요한 부분 뽑기
+    strResult = Splitter(strResult, """dataset"":")
+    
+    '필요 정보 입력 (EPS/BPS/DPS)
+    v = ParseJson(strResult, "E312000")
+    
+    'DB에 정보 넣기
+    For i = 2 To UBound(v)
+        'EPS
+        sht.Cells(11, 20 - i + 4 + standYear - 2020) = v(UBound(v) - i + 2, 1)
+    Next
+    
+    '초기화
+    Set htmlResult = Nothing
+    
+    '호출 날짜 표시
+    sht.Range("W11") = Date
+    
+End If
+
+'메인 시트에 붙여넣기
+sht.Range("T11:V11").Copy
+wbLocal.Sheets("개별종목").Range(wbLocal.Sheets("개별종목").Cells(3, 14 + standYear - 2020), wbLocal.Sheets("개별종목").Cells(3, 16 + standYear - 2020)).PasteSpecial xlPasteValues
+
+'저장 후 종료
+wbCopy.Save
+wbCopy.Close
+
+'초기화
+Set htmlResult = Nothing
+
+Exit Sub
+errHandle:
+    wbCopy.Save
+    wbCopy.Close
+End Sub
+
+'컨센서스
+'3개년 BPS 데이터 받아오기
+Sub fnspace_API_Consen_3years_BPS()
+
+Dim htmlResult As Object
+Dim strResult As String
+Dim url As String
+Dim v As Variant
+
+On Error GoTo errHandle:
+
+code = [V_STOCK_CODE]
+standYear = Sheets("개별종목").Range("C41").Value
+'OX
+logicOX = Sheets("개별종목").Range("G41").Value
+
+'파일 이름
+FileName = Application.ActiveWorkbook.Path & "\data" & "\" & code & ".xlsx"
+
+'덮어씌울 파일 확인
+Set wbLocal = ThisWorkbook
+Set wbCopy = Workbooks.Open(FileName)
+Set sht = wbCopy.ActiveSheet
+
+'전체행
+rownum = sht.Cells(Rows.Count, 20 + standYear - 2020).End(xlUp).Row
+
+'처음인 경우만 API 호출 / 호출 원하는 경우 / 오늘 이미 수집한 경우는 제외
+If rownum = 11 Or (logicOX = "o" And sht.Range("W12").Value <> Date) Then
+    url = "https://www.fnspace.com/Api/Consensus2Api?key=##=json&code=" & code & "&item=E314000&consolgb=M&annualgb=A&fraccyear=" & standYear + 1 & "&toaccyear=" & standYear + 3
+    Set htmlResult = CreateObject("htmlfile")
+    Set htmlResult = GetHttp(url, "GET")
+    
+    strResult = htmlResult.body.innerHTML
+    
+    '필요한 부분 뽑기
+    strResult = Splitter(strResult, """dataset"":")
+    
+    '필요 정보 입력 (EPS/BPS/DPS)
+    v = ParseJson(strResult, "E314000")
+    
+    'DB에 정보 넣기
+    For i = 2 To UBound(v)
+        'BPS
+        sht.Cells(12, 20 - i + 4 + standYear - 2020) = v(UBound(v) - i + 2, 1)
+    Next
+    
+    '초기화
+    Set htmlResult = Nothing
+    
+    '호출 날짜 표시
+    sht.Range("W12") = Date
+    
+End If
+
+'메인 시트에 붙여넣기
+sht.Range("T12:V12").Copy
+wbLocal.Sheets("개별종목").Range(wbLocal.Sheets("개별종목").Cells(4, 14 + standYear - 2020), wbLocal.Sheets("개별종목").Cells(4, 16 + standYear - 2020)).PasteSpecial xlPasteValues
+
+'저장 후 종료
+wbCopy.Save
+wbCopy.Close
+
+'초기화
+Set htmlResult = Nothing
+
+Exit Sub
+errHandle:
+    wbCopy.Save
+    wbCopy.Close
+End Sub
+
+'컨센서스
+'3개년 DPS 데이터 받아오기
+Sub fnspace_API_Consen_3years_DPS()
+
+Dim htmlResult As Object
+Dim strResult As String
+Dim url As String
+Dim v As Variant
+
+On Error GoTo errHandle:
+
+code = [V_STOCK_CODE]
+standYear = Sheets("개별종목").Range("C41").Value
+'OX
+logicOX = Sheets("개별종목").Range("I41").Value
+
+'파일 이름
+FileName = Application.ActiveWorkbook.Path & "\data" & "\" & code & ".xlsx"
+
+'덮어씌울 파일 확인
+Set wbLocal = ThisWorkbook
+Set wbCopy = Workbooks.Open(FileName)
+Set sht = wbCopy.ActiveSheet
+
+'전체행
+rownum = sht.Cells(Rows.Count, 20 + standYear - 2020).End(xlUp).Row
+
+'처음인 경우만 API 호출 / 호출 원하는 경우 / 오늘 이미 수집한 경우는 제외
+If rownum = 12 Or (logicOX = "o" And sht.Range("W13").Value <> Date) Then
+    url = "https://www.fnspace.com/Api/Consensus2Api?key=##=json&code=" & code & "&item=E423800&consolgb=M&annualgb=A&fraccyear=" & standYear + 1 & "&toaccyear=" & standYear + 3
+    Set htmlResult = CreateObject("htmlfile")
+    Set htmlResult = GetHttp(url, "GET")
+    
+    strResult = htmlResult.body.innerHTML
+    
+    '필요한 부분 뽑기
+    strResult = Splitter(strResult, """dataset"":")
+    
+    '필요 정보 입력 (EPS/BPS/DPS)
+    v = ParseJson(strResult, "E423800")
+    
+    'DB에 정보 넣기
+    For i = 2 To UBound(v)
+        'DPS
+        sht.Cells(13, 20 - i + 4 + standYear - 2020) = v(UBound(v) - i + 2, 1)
+    Next
+    
+    '초기화
+    Set htmlResult = Nothing
+    
+    '호출 날짜 표시
+    sht.Range("W13") = Date
+    
+End If
+
+'메인 시트에 붙여넣기
+sht.Range("T13:V13").Copy
+wbLocal.Sheets("개별종목").Range(wbLocal.Sheets("개별종목").Cells(5, 14 + standYear - 2020), wbLocal.Sheets("개별종목").Cells(5, 16 + standYear - 2020)).PasteSpecial xlPasteValues
+
+'저장 후 종료
+wbCopy.Save
+wbCopy.Close
+
+'초기화
+Set htmlResult = Nothing
+
+Exit Sub
+errHandle:
+    wbCopy.Save
+    wbCopy.Close
+End Sub
+
+'재무정보
+'과거 EPS/BPS/DPS 데이터 받아오기
+Sub fnspace_API_Financial_years()
+
+Dim htmlResult As Object
+Dim strResult As String
+Dim url As String
+
+On Error GoTo errHandle:
+
+code = [V_STOCK_CODE]
+standYear = Sheets("개별종목").Range("C41")
+
+'파일 이름
+FileName = Application.ActiveWorkbook.Path & "\data" & "\" & code & ".xlsx"
+
+'덮어씌울 파일 확인
+Set wbLocal = ThisWorkbook
+Set wbCopy = Workbooks.Open(FileName)
+Set sht = wbCopy.ActiveSheet
+
+''전체 행 구하기
+'rownum = sht.Range("AA3", sht.Range("AA3").End(xlDown)).Rows.Count + 1
+'If rownum > 100000 Then
+'    rownum = 2
+'End If
+'전체 행 구하기
+rownum = sht.Cells(Rows.Count, 27 + standYear - 2020).End(xlUp).Row
+
+'처음인 경우만 API 호출
+If rownum = 2 Then
+    url = "https://www.fnspace.com/Api/FinanceApi?key=##=json&code=" & code & "&item=M312000,M314000,M423400&consolgb=M&annualgb=A&fraccyear=2013&toaccyear=" & standYear
+    Set htmlResult = CreateObject("htmlfile")
+    Set htmlResult = GetHttp(url, "GET")
+    
+    strResult = htmlResult.body.innerHTML
+    
+    '필요한 부분 뽑기
+    strResult = Splitter(strResult, """dataset"":")
+    
+    '필요 정보 입력 (EPS/BPS/DPS)
+    v = ParseJson(strResult, "M312000, M314000, M423400")
+    
+    'DB에 정보 넣기
+    For i = 2 To UBound(v)
+        'EPS
+        sht.Cells(3, 19 - i + 10 + standYear - 2020) = v(UBound(v) - i + 2, 1)
+        'DPS
+        sht.Cells(4, 19 - i + 10 + standYear - 2020) = v(UBound(v) - i + 2, 2)
+        'BPS
+        sht.Cells(5, 19 - i + 10 + standYear - 2020) = v(UBound(v) - i + 2, 3)
+    Next
+End If
+
+'메인 시트에 붙여넣기
+'sht.Range("T3:AA5").Copy
+sht.Range(Cells(3, 20), Cells(5, 27 + standYear - 2020)).Copy
+wbLocal.Sheets("개별종목").Range("F3").PasteSpecial xlPasteValues
+
+'저장 후 종료
+wbCopy.Save
+wbCopy.Close
+
+'초기화
+Set htmlResult = Nothing
+
+Exit Sub
+errHandle:
+    wbCopy.Save
+    wbCopy.Close
+End Sub
+
+'컨센서스
+'일간값 API로 받아오기
+Sub fnspace_API_Consen_Forward()
+
+Dim htmlResult As Object
+Dim strResult As String
+Dim url As String
+Dim vArr, vPrice, vEPS, vtarget As Variant
+ReDim vPrice(1 To 3000, 1 To 2)
+
+On Error GoTo errHandle:
+
+code = [V_STOCK_CODE]
+strToday = Format(Date, "yyyymmdd") - 1
+
+'파일 이름
+FileName = Application.ActiveWorkbook.Path & "\data" & "\" & code & ".xlsx"
+
+'덮어씌울 파일 확인
+Set wbLocal = ThisWorkbook
+Set wbCopy = Workbooks.Open(FileName)
+Set sht = wbCopy.ActiveSheet
+
+'전체 행 구하기
+rownum = sht.Range("B2", sht.Range("B2").End(xlDown)).Rows.Count + 1
+If rownum > 100000 Then
+    rownum = 2
+End If
+
+'시작날짜 지정하기
+If rownum = 2 Then
+    '완전 처음인 경우
+    strStart = Int("20130102")
+'어제까지 이미 수집된 경우
+ElseIf Int(Format(sht.Range("B" & rownum).Value, "yyyymmdd")) = strToday Then
+    strStart = ""
+Else
+    '이미 데이터 있는 경우
+    strStart = Format(sht.Range("B" & rownum).Value, "yyyymmdd") + 1
+End If
+
+'이미 수집된 경우 제외
+If strStart <> "" Then
+    'ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+    ''Scraping : 종가 정보는 네이버 금융에서 가져옴
+        url = "https://fchart.stock.naver.com/sise.nhn?symbol=" & Right(code, 6) & "&timeframe=day&count=2500&requestType=0"
+        Set htmlResult = CreateObject("htmlfile")
+        Set htmlResult = GetHttp(url, "GET")
+        
+        num = 1
+        itemLen = htmlResult.getelementsbytagname("item").Length
+    
+        For i = 0 To itemLen - 1
+            vArr = Split(htmlResult.getelementsbytagname("item")(i).getAttribute("data"), "|")
+            '어제 이하
+            If Int(vArr(0)) >= strStart Then
+                '시작날짜 이상
+                If Int(vArr(0)) <= strToday Then
+                    vPrice(num, 1) = vArr(4)
+                    'vPrice(num, 2) = Left(vArr(0), 4) & "-" & Mid(vArr(0), 5, 2) & "-" & Right(vArr(0), 2)
+                    vPrice(num, 2) = vArr(0)
+                    num = num + 1
+                Else
+                    Exit For
+                End If
+            End If
+        Next
+            
+        '초기화
+        Set htmlResult = Nothing
+    'ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+    
+    
+    ''API : EPS / BPS 정보는 '컨센서스-forward 지표'에서 가져옴
+        url = "https://www.fnspace.com/Api/Consensus4Api?key=##=json&code=" & code & "&item=E312060,E382160,E314060,E382560&consolgb=M&frdate=" & strStart & "&todate=" & strToday
+        Set htmlResult = CreateObject("htmlfile")
+        Set htmlResult = GetHttp(url, "GET")
+    
+        strResult = htmlResult.body.innerHTML
+    
+        '필요한 부분 뽑기
+        strResult = Splitter(strResult, """dataset"":")
+    
+        '필요 정보 입력 [ 일자 / EPS(12M) / 일P/E / BPS(12M) / 일P/B ]
+        vEPS = ParseJson(strResult, "DT,E312060,E382160,E314060,E382560")
+        
+        '초기화
+        Set htmlResult = Nothing
+    'ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+    
+    
+    ''API : 목표주가 정보는 '컨센서스-투자의견&목표주가'에서 가져옴
+        url = "https://www.fnspace.com/Api/Consensus1Api?key=##=json&code=" & code & "&item=E612500&frdate=" & strStart & "&todate=" & strToday
+        Set htmlResult = CreateObject("htmlfile")
+        Set htmlResult = GetHttp(url, "GET")
+    
+        strResult = htmlResult.body.innerHTML
+    
+        '필요한 부분 뽑기
+        strResult = Splitter(strResult, """dataset"":")
+    
+        '필요 정보 입력 [ EPS(12M) / BPS(12M) ]
+        vtarget = ParseJson(strResult, "E612500")
+        
+        '초기화
+        Set htmlResult = Nothing
+    'ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+    
+    '전체 행 구하기
+    rownum = sht.Range("B2", sht.Range("B2").End(xlDown)).Rows.Count - 1
+    If rownum > 100000 Then
+        rownum = 0
+    End If
+    
+    '파일에 데이터 덮어씌우기
+    chkNum = 3
+    priceNum = 1
+    For i = 1 To UBound(vEPS)
+        '날짜 공백인 경우 제외
+        If Replace(vEPS(i, 1), "-", "") <> "" Then
+            '날짜 비교 후 더 이전 날짜는 제외함
+            If strStart <= Int(Replace(vEPS(i, 1), "-", "")) Then
+                '날짜
+                sht.Range("B" & rownum + chkNum) = vEPS(i, 1)
+                'EPS(12M)
+                sht.Range("D" & rownum + chkNum) = vEPS(i, 2)
+                '일 PER
+                sht.Range("E" & rownum + chkNum) = vEPS(i, 3)
+                'BPS(12M)
+                sht.Range("I" & rownum + chkNum) = vEPS(i, 4)
+                '일 PBR
+                sht.Range("J" & rownum + chkNum) = vEPS(i, 5)
+    
+                '목표주가
+                sht.Range("N" & rownum + chkNum) = vtarget(i, 1)
+                
+                '종가
+                If Int(vPrice(priceNum, 2)) = Int(Format(sht.Range("B" & rownum + chkNum).Value, "yyyymmdd")) Then
+                    sht.Range("C" & rownum + chkNum) = vPrice(priceNum, 1)
+                    priceNum = priceNum + 1
+                End If
+                
+                chkNum = chkNum + 1
+            End If
+        End If
+    Next
+    
+End If
+
+'복사시트 행 구하기
+rownum = sht.Range("B2", sht.Range("B2").End(xlDown)).Rows.Count + 1
+If rownum > 100000 Then
+    rownum = 3
+End If
+
+'기준날짜 설정
+standardNum = Int(wbLocal.Sheets("개별종목").Range("C10"))
+For i = 3 To rownum
+    If standardNum <= Int(Format(sht.Range("B" & i).Value, "yyyymmdd")) Then
+        startRow = i
+        Exit For
+    End If
+Next
+
+
+'메인 시트에 붙여넣기
+sht.Range("B" & startRow & ":N" & rownum).Copy
+'wbLocal.Sheets("개별종목").Range("B45").PasteSpecial xlPasteValues
+wbLocal.Sheets("개별종목").Range("B44").PasteSpecial xlPasteValues
+
+'정렬
+wbLocal.Sheets("개별종목").Range("B44:N" & (rownum - 3 + 45)).Sort Key1:=wbLocal.Sheets("개별종목").Range("B44"), Order1:=xlDescending
+
+'저장 후 종료
+wbCopy.Save
+wbCopy.Close
+
+''오늘 날짜 정보 입력
+'Sheets("개별종목").Range("B44") = Sheets("개별종목").Range("B45") + 1
+'Sheets("개별종목").Range("C44") = Sheets("개별종목").Range("G7")
+'Sheets("개별종목").Range("D44") = Sheets("개별종목").Range("D45")
+'Sheets("개별종목").Range("I44") = Sheets("개별종목").Range("I45")
+'Sheets("개별종목").Range("N44") = Sheets("개별종목").Range("N45")
+
+Application.Goto Worksheets("개별종목").Cells(1, 1)
+
+Exit Sub
+errHandle:
+    wbCopy.Save
+    wbCopy.Close
+End Sub
+

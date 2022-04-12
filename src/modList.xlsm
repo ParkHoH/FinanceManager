@@ -1,0 +1,142 @@
+
+
+Sub 전체갱신()
+
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Application.DisplayAlerts = False
+    
+    For r = 6 To Sheets("전체종목").Cells(Rows.Count, "A").End(xlUp).Row
+        개별갱신 r
+        
+        목록저장
+        Application.ScreenUpdating = True
+        
+        Rows(r).Select
+        DoEvents
+        Application.ScreenUpdating = False
+    Next
+
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Application.DisplayAlerts = True
+    
+End Sub
+
+Function 개별갱신(r)
+
+    On Error GoTo hErr
+    Row = WorksheetFunction.Match(Sheets("전체종목").Cells(r, "A").Value, Worksheets("Company").Range("B:B"), 0)
+    If Row = 0 Then
+        msg = "종목코드를 찾을 수 없습니다"
+        GoTo hErr
+    Else
+        code = Worksheets("Company").Cells(Row, 1).Value
+    End If
+    
+    [V_STOCK_CODE] = code
+    [V_STOCK_NAME] = Sheets("전체종목").Cells(r, "A").Value
+
+    Call modAction.RefreshAll
+    
+hErr:
+    If Err.Number <> 0 Then
+        sList.Cells(r, "AO").Value = Err.Description
+        Err.Clear
+    End If
+    
+End Function
+
+
+Sub 목록저장()
+    
+    종목명 = Range("V_STOCK_NAME").Value
+    On Error Resume Next
+        ListRow = WorksheetFunction.Match(종목명, Sheets("전체종목").Range("A:A"), 0)
+    On Error GoTo 0
+    
+    If ListRow = 0 Then
+        ListRow = Sheets("전체종목").Cells(Rows.Count, "A").End(xlUp).Row + 1
+    End If
+    
+    Application.CutCopyMode = False
+
+    '종목
+    Sheets("전체종목").Cells(ListRow, "A").Value = 종목명
+    '현재가
+    Sheets("전체종목").Cells(ListRow, "B").Value = Sheets("개별종목").Range("G7").Value
+    '배당률
+    Sheets("전체종목").Cells(ListRow, "C").Value = Sheets("개별종목").Range("D5").Value
+    '추정기관수
+    Sheets("전체종목").Cells(ListRow, "D").Value = Sheets("개별종목").Range("C2").Value
+    '12M EPS
+    Sheets("전체종목").Cells(ListRow, "E").Value = Sheets("개별종목").Range("D44").Value
+    '최저
+    Sheets("전체종목").Cells(ListRow, "F").Value = Sheets("개별종목").Range("F44").Value
+    '최고
+    Sheets("전체종목").Cells(ListRow, "G").Value = Sheets("개별종목").Range("G44").Value
+    '평균
+    Sheets("전체종목").Cells(ListRow, "H").Value = Sheets("개별종목").Range("H44").Value
+
+    'PER
+    If Sheets("전체종목").Cells(ListRow, "E").Value <> 0 Then
+        Sheets("전체종목").Cells(ListRow, "X").Value = Sheets("전체종목").Cells(ListRow, "B").Value / Sheets("전체종목").Cells(ListRow, "E").Value
+    End If
+    'PBR
+    If Sheets("전체종목").Cells(ListRow, "L").Value <> 0 Then
+        Sheets("전체종목").Cells(ListRow, "Y").Value = Sheets("전체종목").Cells(ListRow, "B").Value / Sheets("전체종목").Cells(ListRow, "L").Value
+    End If
+    
+    'PER 최저/최고/평균 : 나누는 값이 0이 아닌 경우
+    If Sheets("전체종목").Cells(ListRow, "X").Value <> 0 Then
+        Sheets("전체종목").Cells(ListRow, "I").Value = Sheets("전체종목").Cells(ListRow, "F").Value / Sheets("전체종목").Cells(ListRow, "X").Value - 1
+        Sheets("전체종목").Cells(ListRow, "J").Value = Sheets("전체종목").Cells(ListRow, "G").Value / Sheets("전체종목").Cells(ListRow, "X").Value - 1
+        Sheets("전체종목").Cells(ListRow, "K").Value = Sheets("전체종목").Cells(ListRow, "H").Value / Sheets("전체종목").Cells(ListRow, "X").Value - 1
+    Else
+        Sheets("전체종목").Cells(ListRow, "I").Value = ""
+        Sheets("전체종목").Cells(ListRow, "J").Value = ""
+        Sheets("전체종목").Cells(ListRow, "K").Value = ""
+    End If
+    
+    '12M BPS
+    Sheets("전체종목").Cells(ListRow, "L").Value = Sheets("개별종목").Range("I44").Value
+    '최저
+    Sheets("전체종목").Cells(ListRow, "M").Value = Sheets("개별종목").Range("K44").Value
+    '최고
+    Sheets("전체종목").Cells(ListRow, "N").Value = Sheets("개별종목").Range("L44").Value
+    '평균
+    Sheets("전체종목").Cells(ListRow, "O").Value = Sheets("개별종목").Range("M44").Value
+    
+    'PBR 최저/최고/평균 : 나누는 값이 0이 아닌 경우
+    If Sheets("전체종목").Cells(ListRow, "Y").Value <> 0 Then
+        Sheets("전체종목").Cells(ListRow, "P").Value = Sheets("전체종목").Cells(ListRow, "P").Value / Sheets("전체종목").Cells(ListRow, "Y").Value - 1
+        Sheets("전체종목").Cells(ListRow, "Q").Value = Sheets("전체종목").Cells(ListRow, "Q").Value / Sheets("전체종목").Cells(ListRow, "Y").Value - 1
+        Sheets("전체종목").Cells(ListRow, "R").Value = Sheets("전체종목").Cells(ListRow, "R").Value / Sheets("전체종목").Cells(ListRow, "Y").Value - 1
+    Else
+        Sheets("전체종목").Cells(ListRow, "P").Value = ""
+        Sheets("전체종목").Cells(ListRow, "Q").Value = ""
+        Sheets("전체종목").Cells(ListRow, "R").Value = ""
+    End If
+    
+    '최초일자
+    rownum = Sheets("개별종목").Cells(Rows.Count, "B").End(xlUp).Row
+    Sheets("전체종목").Cells(ListRow, "S").Value = Sheets("개별종목").Range("B" & rownum).Value
+    '목표주가
+    Sheets("전체종목").Cells(ListRow, "T").Value = Sheets("개별종목").Range("C7").Value
+    
+    '목표주가/현재가 -1
+    If Sheets("전체종목").Cells(ListRow, "B").Value <> 0 Then
+        Sheets("전체종목").Cells(ListRow, "U").Value = Sheets("전체종목").Cells(ListRow, "T").Value / Sheets("전체종목").Cells(ListRow, "B").Value - 1
+    End If
+        
+    '12개월 e상승률
+    Sheets("전체종목").Cells(ListRow, "V").Value = Sheets("개별종목").Range("D8").Value
+    '목표주가
+    Sheets("전체종목").Cells(ListRow, "W").Value = Sheets("개별종목").Range("D9").Value
+
+    'ROE
+    Sheets("전체종목").Cells(ListRow, "Z").Value = Sheets("개별종목").Range("D10").Value
+    
+    Application.Goto Sheets("전체종목").Rows(ListRow)
+    
+End Sub

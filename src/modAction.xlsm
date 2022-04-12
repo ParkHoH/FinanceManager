@@ -1,0 +1,196 @@
+
+Public Const DEBUG_MODE As Boolean = False
+Public Const CHROME_PATH As String = "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe "
+
+'검색 버튼 클릭
+Sub Btn_Search()
+    frmStockList.Show
+End Sub
+
+'최근검색
+Sub Btn_Search2()
+    frmStockList2.Show
+End Sub
+
+Sub Btn_test()
+    
+    code = Range("V_STOCK_CODE").Value
+    url = "http://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?" & _
+        "pGB=1&gicode=" & code & "&cID=&MenuYn=Y&ReportGB=&NewMenuID=101&stkGb=701"
+    result = Shell(CHROME_PATH & url, vbNormalFocus)
+
+End Sub
+
+Sub Btn_FN()
+    
+    code = Range("V_STOCK_CODE").Value
+    strURL = "http://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?" & _
+        "pGB=1&gicode=" & code & "&cID=&MenuYn=Y&ReportGB=&NewMenuID=101&stkGb=701"
+    Shell ("C:\Program Files\Google\Chrome\Application\chrome.exe -url " & strURL)
+
+End Sub
+
+Sub Btn_NV()
+    
+    code = Mid(Range("V_STOCK_CODE").Value, 2)
+    strURL = "https://finance.naver.com/item/fchart.nhn?code=" & code
+    Shell ("C:\Program Files\Google\Chrome\Application\chrome.exe -url " & strURL)
+
+End Sub
+
+
+Sub Btn_WiseReport()
+        
+    code = Mid(Range("V_STOCK_CODE").Value, 2)
+    strURL = "http://comp.wisereport.co.kr/company/c1050001.aspx?cmp_cd=" & code & "&cn="
+    Shell ("C:\Program Files\Google\Chrome\Application\chrome.exe -url " & strURL)
+    
+End Sub
+
+Sub Btn_HK()
+    
+    Dim strSdate        As String
+    Dim strEdate        As String
+        
+    strSdate = Format(Date, "yyyy-mm-dd")
+    strEdate = Format(Date - 365, "yyyy-mm-dd")
+    
+    code = Mid(Range("V_STOCK_CODE").Value, 2)
+    
+    strURL = "http://consensus.hankyung.com/apps.analysis/analysis.list?sdate=" & strEdate & _
+             "&edate=" & strSdate & _
+             "&now_page=1&search_value=&report_type=&pagenum=20&search_text=" & code
+    Shell ("C:\Program Files\Google\Chrome\Application\chrome.exe -url " & strURL)
+    
+    
+End Sub
+
+Sub Btn_PER()
+
+    sMain.Shapes("SHP_PER").Fill.ForeColor.ObjectThemeColor = msoThemeColorAccent2
+    sMain.Shapes("SHP_PER").TextFrame2.TextRange.Font.Fill.ForeColor.Brightness = 0
+    sMain.Shapes("CHT_PER").Visible = True
+    
+    sMain.Shapes("SHP_PBR").Fill.ForeColor.ObjectThemeColor = msoThemeColorBackground1
+    sMain.Shapes("SHP_PBR").TextFrame2.TextRange.Font.Fill.ForeColor.Brightness = -0.35
+    sMain.Shapes("CHT_PBR").Visible = False
+
+End Sub
+
+Sub Btn_PBR()
+
+    sMain.Shapes("SHP_PER").Fill.ForeColor.ObjectThemeColor = msoThemeColorBackground1
+    sMain.Shapes("SHP_PER").TextFrame2.TextRange.Font.Fill.ForeColor.Brightness = -0.35
+    sMain.Shapes("CHT_PER").Visible = False
+    
+    sMain.Shapes("SHP_PBR").Fill.ForeColor.ObjectThemeColor = msoThemeColorAccent2
+    sMain.Shapes("SHP_PBR").TextFrame2.TextRange.Font.Fill.ForeColor.Brightness = 0
+    sMain.Shapes("CHT_PBR").Visible = True
+
+End Sub
+
+Sub Btn_추정가격_갱신()
+
+    Application.ScreenUpdating = False
+    
+    For i = 6 To Sheets("전체종목").Cells(Rows.Count, "A").End(xlUp).Row
+        codeRow = WorksheetFunction.Match(Sheets("전체종목").Range("A" & i), Sheets("Company").Range("B:B"), 0)
+        [V_STOCK_CODE] = Sheets("Company").Range("A" & codeRow).Value
+        'FN 가이드 함수 호출
+        Call fnguide_Scraping
+        Sheets("전체종목").Range("D" & i) = Sheets("개별종목").Range("C" & 2)
+        If (i Mod 20) = 0 Then
+            DoEvents
+        End If
+    Next
+    
+    Application.ScreenUpdating = True
+    
+End Sub
+
+Sub Btn_현재가_갱신()
+
+    Application.ScreenUpdating = False
+    
+    For i = 6 To Sheets("전체종목").Cells(Rows.Count, "A").End(xlUp).Row
+        codeRow = WorksheetFunction.Match(Sheets("전체종목").Range("A" & i), Sheets("Company").Range("B:B"), 0)
+        [V_STOCK_CODE] = Sheets("Company").Range("A" & codeRow).Value
+        '네이버 가격 함수 호출
+        Call naver_Finance_Price
+        Sheets("전체종목").Range("B" & i) = Sheets("개별종목").Range("G" & 7)
+        If (i Mod 20) = 0 Then
+            DoEvents
+        End If
+    Next
+    
+    Application.ScreenUpdating = True
+    
+End Sub
+
+Sub Btn_재무데이터_다운()
+
+'메세지 박스
+answer = MsgBox("재무데이터 수집할까요? 많은 시간이 소요됩니다.", vbQuestion + vbYesNo + vbDefaultButton2, "메세지 박스")
+If answer = vbYes Then
+
+    Application.ScreenUpdating = False
+    
+    For i = 2 To Sheets("Company").Cells(Rows.Count, "A").End(xlUp).Row
+        'codeRow = WorksheetFunction.Match(Sheets("전체종목").Range("A" & i), Sheets("Company").Range("B:B"), 0)
+        [V_STOCK_CODE] = Sheets("Company").Range("A" & i).Value
+        '파일 생성
+        chkWorkbookExist
+        '네이버 가격 함수 호출
+        Call fnspace_API_Financial_years
+        If (i Mod 20) = 0 Then
+            DoEvents
+        End If
+    Next
+    
+    Application.ScreenUpdating = True
+    
+End If
+    
+End Sub
+
+Sub Btn_BringChartFront_PER()
+
+Sheets("개별종목").Shapes("PER차트").ZOrder msoBringToFront
+Sheets("개별종목").Shapes("12M_EPS").ZOrder msoBringToFront
+
+End Sub
+
+
+Sub Btn_BringChartFront_PBR()
+
+Sheets("개별종목").Shapes("PBR차트").ZOrder msoBringToFront
+Sheets("개별종목").Shapes("12M_BPS").ZOrder msoBringToFront
+
+End Sub
+
+
+Sub RefreshAll()
+    
+    Call clearSheet
+    Call chkWorkbookExist
+    Call fnguide_Scraping
+    Call fnspace_API_Consen_3years_EPS
+    Call fnspace_API_Consen_3years_BPS
+    Call fnspace_API_Consen_3years_DPS
+    Call fnspace_API_Financial_years
+    Call fnspace_API_Consen_Forward
+    Call naver_Finance_Price
+    Call nullAction
+    Call max_min_average
+    
+End Sub
+
+Sub RefreshMarketData_Click()
+    
+    Application.ScreenUpdating = False
+    Call RefreshMarketData
+    Call RefreshEPSChange
+    
+End Sub
+
+

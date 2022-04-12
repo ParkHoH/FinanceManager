@@ -1,0 +1,408 @@
+
+Function GetHTML(ByVal url As String, Optional ByVal Async As Boolean = False, Optional ByVal PostData As String, Optional ByVal RequestHeader As Variant, Optional ByVal CharSet As String = "EUC-KR", Optional ByVal debugMode As Boolean = False) As String
+
+    On Error GoTo ErrorHandler
+    
+    method = IIf(PostData = "", "GET", "POST")
+    
+    Set winhttp = CreateObject("WinHttp.WinHttpRequest.5.1")
+    winhttp.Open method, url, Async
+    If TypeName(RequestHeader) = "Variant()" Then
+        For Each Header In RequestHeader
+            idx = InStr(Header, ":")
+            If idx > 0 Then
+                Key = Trim(Left(Header, idx - 1))
+                Value = Trim(Mid(Header, idx + 1))
+                If Key <> "" And Value <> "" Then winhttp.setRequestHeader Key, Value
+            End If
+        Next
+    End If
+    winhttp.send PostData
+    If CharSet = "" Then
+        GetHTML = winhttp.responsetext
+    Else
+        GetHTML = GetBinaryToText(winhttp.responseBody, CharSet)
+    End If
+    If debugMode Then Debug.Print GetHTML
+ErrorHandler:
+
+    If Err.Number <> 0 Then
+        Debug.Print Err.Source & "|" & Err.Description
+        Err.Clear
+    End If
+    
+End Function
+
+
+Function GetBinaryToText(ByRef binary As Variant, Optional ByRef CharSet As String = "EUC-KR") As String
+    
+    On Error GoTo ErrorHandler
+    
+    Const adTypeBinary = 1
+    Const adTypeText = 2
+    
+    Set conv = CreateObject("ADODB.Stream")
+    
+    conv.Open
+    conv.Type = adTypeBinary
+    conv.write = binary
+    
+    conv.Position = 0
+    conv.Type = adTypeText
+    conv.CharSet = CharSet
+    
+    GetBinaryToText = conv.ReadText
+    
+    conv.Close
+    
+    Exit Function
+    
+ErrorHandler:
+
+    If Err.Number <> 0 Then
+        Debug.Print Err.Source & "|" & Err.Description
+        Err.Clear
+    End If
+
+End Function
+
+
+Function EncodeURL(str)
+
+    Set ScriptEngine = CreateObject("scriptcontrol")
+    ScriptEngine.Language = "JScript"
+    encoded = ScriptEngine.Run("encodeURIComponent", str)
+    EncodeURL = encoded
+    
+End Function
+
+
+Function EncodeURL2(str)
+
+    Set htmlfile = CreateObject("htmlfile")
+
+    htmlfile.parentWindow.execScript "function encode(s) {return encodeURIComponent(s)}", "jscript"
+
+    EncodeURL2 = htmlfile.parentWindow.encode(str)
+        
+End Function
+
+
+Function GetBetween(ByVal Text As String, ByRef StrA As String, ByRef StrB As String) As String
+    
+    Dim nLenA As Long
+    Dim nLenB As Long
+    Dim nLenC As Long
+    Dim nPosA As Long
+    Dim nPosB As Long
+    Dim nPosC As Long
+    
+    On Error GoTo goErr
+    
+    nLenA = Len(StrA)
+    nLenB = Len(StrB)
+    
+    nPosA = InStr(Text, StrA)
+    nPosB = InStr(nPosA + nLenA, Text, StrB)
+    
+    '// a가 없거나, a 이후에 b가 없는 경우 빈 값 반환
+    If nPosA = 0 Or nPosB = 0 Then Exit Function
+    
+    nPosC = nPosA + nLenA
+    nLenC = nPosB - nPosC
+    
+    GetBetween = Mid(Text, nPosC, nLenC)
+    
+    Exit Function
+    
+goErr:
+
+End Function
+
+
+Function RemoveTags(str)
+
+    Set RegularExpressionObject = CreateObject("VBScript.RegExp")
+    With RegularExpressionObject
+        .Pattern = "<[^>]+>"
+        .IgnoreCase = True
+        .Global = True
+    End With
+    
+    RemoveTags = RegularExpressionObject.Replace(str, "")
+    
+End Function
+
+
+Function RemoveHTML(Text As String) As String
+    Dim regexObject As Object
+    Set regexObject = CreateObject("vbscript.regexp")
+
+    With regexObject
+        .Pattern = "<!*[^<>]*>"    'html tags and comments
+        .Global = True
+        .IgnoreCase = True
+        .MultiLine = True
+    End With
+
+    RemoveHTML = regexObject.Replace(Text, "")
+End Function
+
+
+Public Function getXPathElement(sXPath As String, ByVal objElement As Object) As Object
+    Dim sXPathArray() As String
+    Dim sNodeName As String
+    Dim sNodeNameIndex As String
+    Dim sRestOfXPath As String
+    Dim lNodeIndex As Long
+    Dim lCount As Long
+    
+    ' Split the xpath statement
+    sXPathArray = Split(sXPath, "/")
+    sNodeNameIndex = sXPathArray(1)
+    If Not InStr(sNodeNameIndex, "[") > 0 Then
+        sNodeName = sNodeNameIndex
+        lNodeIndex = 1
+    Else
+        sXPathArray = Split(sNodeNameIndex, "[")
+        sNodeName = sXPathArray(0)
+        lNodeIndex = CLng(Left(sXPathArray(1), Len(sXPathArray(1)) - 1))
+    End If
+    sRestOfXPath = Right(sXPath, Len(sXPath) - (Len(sNodeNameIndex) + 1))
+    
+    Set getXPathElement = Nothing
+    For lCount = 0 To objElement.ChildNodes().Length - 1
+        If UCase(objElement.ChildNodes().Item(lCount).nodeName) = UCase(sNodeName) Then
+            If lNodeIndex = 1 Then
+                If sRestOfXPath = "" Then
+                    Set getXPathElement = objElement.ChildNodes().Item(lCount)
+                Else
+                    Set getXPathElement = getXPathElement(sRestOfXPath, objElement.ChildNodes().Item(lCount))
+                End If
+            End If
+            lNodeIndex = lNodeIndex - 1
+        End If
+    Next lCount
+End Function
+
+
+Function GetHttp(url As String, methodHttp As String, Optional formText As String, Optional isWinHttp As Boolean = False, Optional RequestHeader As Variant, Optional includeMeta As Boolean = False, _
+                Optional adodbConvert As Boolean = False) As Object
+
+ 
+Dim oHTMLDoc As Object: Dim objHTTP As Object
+Dim i As Long: Dim blnAgent As Boolean: blnAgent = False
+Dim sUserAgent As String: sUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36"      ' "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Mobile Safari/537.36"
+ 
+Application.DisplayAlerts = False
+ 
+If Left(url, 4) <> "http" Then url = "http://" & url
+ 
+Set oHTMLDoc = CreateObject("HtmlFile")
+Set HTMLDoc = CreateObject("HtmlFile")
+ 
+If isWinHttp = False Then
+    Set objHTTP = CreateObject("MSXML2.ServerXMLHTTP")
+Else
+    Set objHTTP = CreateObject("WinHttp.WinHttpRequest.5.1")
+End If
+ 
+objHTTP.setTimeouts 3000, 3000, 3000, 3000
+objHTTP.Open methodHttp, url, False
+If Not IsMissing(RequestHeader) Then
+    Dim vRequestHeader As Variant
+    For Each vRequestHeader In RequestHeader
+        Dim uHeader As Long: Dim Lheader As Long: Dim steps As Long
+        uHeader = UBound(vRequestHeader): Lheader = LBound(vRequestHeader)
+        If (uHeader - Lheader) Mod 2 = 0 Then GetHttp = CVErr(xlValue): Exit Function
+        For i = Lheader To uHeader Step 2
+            If vRequestHeader(i) = "User-Agent" Then blnAgent = True
+            objHTTP.setRequestHeader vRequestHeader(i), vRequestHeader(i + 1)
+        Next
+    Next
+End If
+If blnAgent = False Then objHTTP.setRequestHeader "User-Agent", sUserAgent
+ 
+objHTTP.send formText
+
+If adodbConvert = False Then
+    If includeMeta = False Then
+        With oHTMLDoc
+            .Open
+            .write objHTTP.responsetext
+            .Close
+        End With
+    Else
+        oHTMLDoc.body.innerHTML = objHTTP.responsetext
+    End If
+Else
+    Set adostream = CreateObject("ADODB.Stream")
+    adostream.Open
+    adostream.Position = 0
+    
+    adostream.Type = 1
+    adostream.write objHTTP.responseBody
+    
+    adostream.Position = 0
+    adostream.Type = 2
+    
+    adostream.CharSet = "euc-kr"
+    
+    Dim resultstr As String
+    resultstr = adostream.ReadText
+    
+    If includeMeta = False Then
+        With oHTMLDoc
+            .Open
+            .write resultstr
+            .Close
+        End With
+    Else
+        oHTMLDoc.body.innerHTML = resultstr
+    End If
+    
+    adostream.Close
+End If
+ 
+Set GetHttp = oHTMLDoc
+Set oHTMLDoc = Nothing
+Set objHTTP = Nothing
+ 
+Application.DisplayAlerts = True
+ 
+End Function
+
+Sub ExportText(InnerStrings As String, Optional FileName As String = "텍스트추출", Optional Path As String)
+
+Dim TextFile As Integer
+Dim FilePath As String
+
+If Path = "" Then Path = Environ("USERPROFILE") & "\Desktop\"
+FilePath = Path & FileName & ".txt"
+
+TextFile = FreeFile
+
+Open FilePath For Output As TextFile
+Print #TextFile, InnerStrings
+Close TextFile
+
+End Sub
+
+Function Splitter(v As Variant, Cutter As String, Optional Trimmer As String)
+
+Dim vaArr As Variant
+
+vaArr = Split(v, Cutter)(1)
+If Not IsMissing(Trimmer) Then vaArr = Split(vaArr, Trimmer)(0)
+
+Splitter = vaArr
+
+End Function
+
+Function ParseJson(strJSON, strToParse, Optional strID, Optional strToRemove) As Variant
+
+Dim vaToParse As Variant: Dim vToParse As Variant
+Dim vaToRemove As Variant: Dim vToRemove As Variant
+Dim lngStart As Long
+Dim objItm As Variant: Dim strItm As String: Dim tmpItm As String
+Dim itmCnt As Long
+Dim i As Long: Dim r As Long: Dim c As Long
+Dim dicItm As Object
+Dim vaItm As Variant: Dim vaItems As Variant: Dim vaReturn As Variant
+Dim iCol As Long: Dim maxCol As Long: Dim j As Long
+
+Set dicItm = CreateObject("Scripting.Dictionary")
+
+'----------------------------------------------------
+'JSON 쿼리 분할
+'----------------------------------------------------
+vaToParse = Split(strToParse, ",")
+If Not IsMissing(strToRemove) Then vaToRemove = Split(strToRemove, ",")
+
+lngStart = InStr(1, strJSON, "[")
+strJSON = Right(strJSON, Len(strJSON) - lngStart)
+
+''''''이 부분 수정하기
+objItm = Split(strJSON, "{")
+itmCnt = UBound(objItm)
+
+For i = 1 To itmCnt
+    ''''''이 부분 수정하기
+    strItm = Split(objItm(i), "}")(0)
+     iCol = Len(strItm) - Len(Replace(strItm, ":", ""))
+    If iCol > maxCol Then maxCol = iCol
+    
+    If Not IsMissing(strID) Then
+        ReDim vaItm(0 To iCol)
+        vaItm(0) = strID: j = 1
+    Else
+        ReDim vaItm(0 To iCol - 1)
+        j = 0
+    End If
+    
+    On Error Resume Next
+    For Each vToParse In vaToParse
+        If InStr(strItm, Trim(vToParse) & """:") > 0 Then
+            tmpItm = Split(strItm, Trim(vToParse) & """:")(1)
+            tmpItm = Split(tmpItm, ",""")(0)
+            If Left(tmpItm, 1) = """" Then tmpItm = Right(tmpItm, Len(tmpItm) - 1)
+            If Right(tmpItm, 1) = """" Then tmpItm = Left(tmpItm, Len(tmpItm) - 1)
+            tmpItm = Replace(tmpItm, "< ", "")
+            If Not IsMissing(strToRemove) Then
+                For Each vToRemove In vaToRemove
+                    tmpItm = Replace(tmpItm, Trim(vToRemove), "")
+                Next
+            End If
+            vaItm(j) = CStr(tmpItm)
+        End If
+        j = j + 1
+    Next
+    On Error GoTo 0
+    dicItm.Add i, Array(vaItm, 1)
+Next
+
+'----------------------------------------------------
+'Dictionary -> 배열 변환
+'----------------------------------------------------
+r = dicItm.Count
+c = UBound(vaToParse) + 1
+If Not IsMissing(strID) Then c = c + 1
+
+If r = 0 Then ParseJson = ""
+
+vaItems = dicItm.Items
+
+ReDim vaReturn(1 To r, 1 To c)
+
+On Error Resume Next
+For i = 0 To r - 1
+    For j = 0 To c - 1
+        tmpItm = vaItems(i)(0)(j)
+        If IsNumeric(tmpItm) And Left(tmpItm, 1) <> 0 Then vaReturn(i + 1, j + 1) = CDbl(tmpItm) Else vaReturn(i + 1, j + 1) = tmpItm
+    Next
+Next
+On Error GoTo 0
+
+'----------------------------------------------------
+'결과값 리턴
+'----------------------------------------------------
+ParseJson = vaReturn
+
+End Function
+
+Sub ArrayToRng(startRng As Range, Arr As Variant)
+
+On Error GoTo SingleDimension:
+startRng.Cells(1, 1).Resize(UBound(Arr, 1) - LBound(Arr, 1) + 1, UBound(Arr, 2) - LBound(Arr, 2) + 1) = Arr
+
+Exit Sub
+SingleDimension:
+Dim tempArr As Variant: Dim i As Long
+ReDim tempArr(LBound(Arr, 1) To UBound(Arr, 1), 1 To 1)
+For i = LBound(Arr, 1) To UBound(Arr, 1)
+    tempArr(i, 1) = Arr(i)
+Next
+startRng.Cells(1, 1).Resize(UBound(Arr, 1) - LBound(Arr, 1) + 1, 1) = tempArr
+
+End Sub
+
