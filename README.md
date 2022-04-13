@@ -1,7 +1,9 @@
 # Finance Manager
 Excel Visual Basic으로 구현한 금융 데이터 매니저
 
-![image](https://user-images.githubusercontent.com/99107269/163205922-c19bc1b6-56f2-4c0e-9709-bdca7bd61275.png)
+<p align="center">
+  <img width="100%" height="100%" src="https://user-images.githubusercontent.com/99107269/163208462-504385c3-694c-4b86-a99f-d7f8e3dfac5b.png">
+</p>
 
 ## 기술스택
 <p>
